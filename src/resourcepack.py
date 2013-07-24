@@ -45,8 +45,8 @@ Example:
     We have pack1.zip and pack2.zip. We want sounds from pack1 and textures from pack2.
     '''
     print help
-def createPackMeta(description):
-    return json.dump()
+def getPackMeta(pack):
+    return json.loads(pack.read(pack.NameToInfo.get('pack.mcmeta')))
 def analyze(params):
     zipFile = ZipFile(params[0])
     try:
@@ -59,6 +59,8 @@ def analyze(params):
         meta = json.loads(metaJSON)
         print "Pack Description: "+str(meta["pack"]["description"])
         print "Pack Version: "+str(meta["pack"]["pack_format"])
+        if not zipFile.NameToInfo.has_key('pack.mcmeta'):
+            print "***Warning: Your mcmeta file is not located in the standard location, so minecraft will most likely not recognize your pack.***"
     except KeyError:
         print params[0]+" is probably invalid pack, as it doesn't contain pack.mcmeta"
 def extract(params):
@@ -82,8 +84,59 @@ def extract(params):
     print "Finished!"
 def install(params):
     pass
+def getLanguages(meta):
+    languages = {}
+    if meta.has_key("language"):
+        print "Found language(s) in "+meta["pack"]["description"]
+        for langKey in meta["language"].keys():
+            languages[langKey] = meta["language"][langKey]
+    return languages
+def mergePackMeta(meta1,meta2):
+    resultMeta = {"pack":{"pack_format":1,"description":meta1["pack"]["description"]+" + "+meta2["pack"]["description"]}}
+    language = {}
+    lang1 = getLanguages(meta1)
+    for langKey in lang1:
+        language[langKey] = lang1[langKey]
+    lang2 = getLanguages(meta2)
+    for langKey in lang2:
+        if language.has_key(langKey):
+            print "***WARNING: Lossless auto-merge failed, as both packs contain language "+str(langKey)+" ***"
+    if len(language) > 0:
+        resultMeta["language"] = language
+    return resultMeta
 def automerge(params):
-    pass
+    print "Resourcepack Auto-Merge Begin"
+    os.mkdir('myresourcepack')
+    
+    pack1 = ZipFile(params[0])
+    pack2 = ZipFile(params[1])
+
+    print "Extracting "+pack1.filename+"..."
+    pack1.extractall('myresourcepack/')
+    print "Extracting "+pack2.filename+"..."
+    pack2.extractall('myresourcepack/')
+    
+    print "Creating pack.mcmeta file..."
+    
+    packMeta1 = getPackMeta(pack1)
+    packMeta2 = getPackMeta(pack2)
+    resultMeta = mergePackMeta(packMeta1,packMeta2)
+    with open('myresourcepack/pack.mcmeta','w') as f:
+        f.write(json.dumps(resultMeta))
+    print "pack.mcmeta created"
+    
+    print "Creating final zip..."
+    # Begin: Thanks to http://stackoverflow.com/a/3612455
+    target_dir = 'myresourcepack'
+    zip = ZipFile('myresourcepack.zip', 'w')
+    rootlen = len(target_dir) + 1
+    for base, dirs, files in os.walk(target_dir):
+        for file in files:
+            fn = os.path.join(base, file)
+            zip.write(fn, fn[rootlen:])
+    # End stackoverflow thing
+    print "Auto-Merge done!"
+    
 class OperatingSystem():
     def getWorkingDir(self):
         pass
