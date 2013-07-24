@@ -158,7 +158,7 @@ class Mac(OperatingSystem):
 class Linux(OperatingSystem):
     def getWorkingDir(self):
         return os.getenv('user.home', '/home/root/')
-title = '------MineCraft ResourcePack inspector v' + _version_ + ' by ' + _authors_ + '------'
+title = '------MineCraft ResourcePack utils v' + _version_ + ' by ' + _authors_ + '------'
 print title 
 if len(sys.argv) < 2:
     printHelp()
